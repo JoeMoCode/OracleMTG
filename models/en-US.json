@@ -1,0 +1,55 @@
+{
+    "interactionModel": {
+      "languageModel": {
+        "invocationName": "mtg oracle",
+        "intents": [
+          {
+            "name": "AMAZON.CancelIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.HelpIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.StopIntent",
+            "samples": []
+          },
+          {
+            "name": "HelloWorldIntent",
+            "samples": [
+              "hello",
+              "how are you",
+              "say hi world",
+              "say hi",
+              "hi",
+              "say hello world",
+              "say hello"
+            ],
+            "slots": []
+          },
+          {
+            "name": "AMAZON.NavigateHomeIntent",
+            "samples": []
+          }
+        ],
+        "types": [
+          {
+            "name": "MyEntities",
+            "values": [
+              {
+                "name": {
+                  "value": "zero"
+                }
+              },
+              {
+                "name": {
+                  "value": "nothing"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
