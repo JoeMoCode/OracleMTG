@@ -1,0 +1,37 @@
+{
+    "\"Ach! Hans, Run!\"": {
+      "colorIdentity": [
+        "G",
+        "R"
+      ],
+      "colors": [
+        "G",
+        "R"
+      ],
+      "convertedManaCost": 6.0,
+      "foreignData": [],
+      "layout": "normal",
+      "legalities": {},
+      "manaCost": "{2}{R}{R}{G}{G}",
+      "mtgstocksId": 19521,
+      "name": "\"Ach! Hans, Run!\"",
+      "printings": [
+        "UNH"
+      ],
+      "purchaseUrls": {
+        "cardmarket": "https://mtgjson.com/links/6227e6c981cce27c",
+        "mtgstocks": "https://mtgjson.com/links/8666981970482be4",
+        "tcgplayer": "https://mtgjson.com/links/85b366724beadefd"
+      },
+      "rulings": [],
+      "scryfallOracleId": "a2c5ee76-6084-413c-bb70-45490d818374",
+      "subtypes": [],
+      "supertypes": [],
+      "text": "At the beginning of your upkeep, you may say \"Ach Hans, run It's the . . .\" and the name of a creature card. If you do, search your library for a card with that name, put it onto the battlefield, then shuffle your library. That creature gains haste. Exile it at the beginning of the next end step.",
+      "type": "Enchantment",
+      "types": [
+        "Enchantment"
+      ],
+      "uuid": "8f9a35d5-a3a2-556b-88da-6686da3aaa34"
+    }
+  }

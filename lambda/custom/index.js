@@ -2,7 +2,22 @@
 // Please visit https://alexa.design/cookbook for additional examples on implementing slots, dialog management,
 // session persistence, api calls, and more.
 const Alexa = require('ask-sdk-core');
+const persistenceAdapter = require('ask-sdk-s3-persistence-adapter');
 
+//callcards from https://www.mtgjson.com/json/AllCards.json TODO set up pipeline
+//Nice page https://mtgjson.com/downloads/compiled/
+
+const AWS = require('aws-sdk');
+AWS.config.update(
+    {
+        region: 'us-east-1'
+    }
+);
+const S3 = new AWS.S3();
+
+const BUCKET_NAME = 'mtg-json';
+
+//Strings. TODO Localize
 const WELCOME_MSG = "Welcome to MTG Oracle. The unnoficial Alexa Oracle Skill. ";
 const CAPABILITIES_MSG = "You can ask me for the oracle text of any magic card. ";
 const PROMPT = "What can I help you with? ";
@@ -19,6 +34,46 @@ const LaunchRequestHandler = {
             .getResponse();
     }
 };
+const GetCardIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetCardIntent';
+    },
+    async handle(handlerInput) {
+        let speakOutput = "Hmm, I didn't understand that."
+
+        const slotValue = handlerInput.requestEnvelope.request.intent.slots.card.value;
+
+        console.log(slotValue);
+
+        if(slotValue) {
+            const slotId = getCardResolutionValue(handlerInput).id;
+            const slotValueReal = getCardResolutionValue(handlerInput).name;
+            const cardData = await getCardData(slotId);
+
+            console.log(slotId);
+
+            if(cardData) {
+                console.log(JSON.stringify(cardData));
+                speakOutput = `${slotValueReal} is of type ${cardData.type}, costs ${cardData.manaCost}, and has the text, ${cardData.text}. ` + PROMPT;
+            } else {
+                speakOutput = `Oh no, I failed to get the card, ${slotValueReal}. with Id ${slotId}. ` + PROMPT;
+            }
+        }
+
+
+
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(PROMPT)
+            .getResponse();
+    }
+};
+
+function getCardResolutionValue(handlerInput) {
+    return handlerInput.requestEnvelope.request.intent.slots.card.resolutions.resolutionsPerAuthority[0].values[0].value;
+}
+
 const HelloWorldIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -106,12 +161,53 @@ const ErrorHandler = {
     }
 };
 
+function getCardData(cardId) {
+    const key = cardId + ".json";
+    console.log("key: "+ key);
+    const params = {
+        Bucket: BUCKET_NAME,
+        Key: key
+    };
+    return new Promise((resolve, reject) => {
+        S3.getObject(params,  function(err, data) {
+            if (err) {
+                console.log(err, err.stack); // an error occurred
+                reject(err);
+            }
+
+            const objectData = data.Body.toString();
+            console.log(objectData);
+            resolve(JSON.parse(objectData));
+        });
+    });
+}
+
+
+const LoadUserDataInterceptor = {
+    async process(handlerInput) {
+        /*const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = await attributesManager.getPersistentAttributes() || {};
+        
+        const userData = sessionAttributes.hasOwnProperty('userData') ? sessionAttributes.cards : {};
+        
+        if (userData) {
+            attributesManager.setSessionAttributes(sessionAttributes);
+        } */
+    }
+};
+
 // The SkillBuilder acts as the entry point for your skill, routing all request and response
 // payloads to the handlers above. Make sure any new handlers or interceptors you've
 // defined are included below. The order matters - they're processed top to bottom.
 exports.handler = Alexa.SkillBuilders.custom()
+    .withPersistenceAdapter(
+        new persistenceAdapter.S3PersistenceAdapter({bucketName:process.env.S3_PERSISTENCE_BUCKET})
+    ).addRequestInterceptors(
+        LoadUserDataInterceptor
+    )
     .addRequestHandlers(
         LaunchRequestHandler,
+        GetCardIntentHandler,
         HelloWorldIntentHandler,
         HelpIntentHandler,
         CancelAndStopIntentHandler,
