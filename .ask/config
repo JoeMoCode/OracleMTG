@@ -10,7 +10,7 @@
         },
         "interactionModel": {
           "en-US": {
-            "eTag": "c219d3ee01ac9599a56c3c2df4386963"
+            "eTag": "364a356a0e9f5ca40012a58c8d09a3a2"
           }
         },
         "lambda": [
@@ -23,7 +23,7 @@
             "codeUri": "lambda/custom",
             "functionName": "ask-custom-OracleMTG-default",
             "handler": "index.handler",
-            "revisionId": "085e40b1-e8ce-4084-8eb7-3dd62205f190",
+            "revisionId": "1cc0abf7-ed44-448f-88b0-5c0fbd4fc104",
             "runtime": "nodejs8.10"
           }
         ]
