@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "type": "APLT",
+    "mainTemplate": {
+        "item": {
+            "type": "Text",
+            "id": "cardName",
+            "textAlign": "right",
+            "text": "${payload.card.name}",
+            "overflow": "marquee"
+        }
+    }
+}

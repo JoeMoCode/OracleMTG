@@ -3,6 +3,8 @@
 // session persistence, api calls, and more.
 const Alexa = require('ask-sdk-core');
 const persistenceAdapter = require('ask-sdk-s3-persistence-adapter');
+const cardDocument = require('./documents/CardDocument.json');
+const cardDocumentText = require('./documents/CardDocumentText.json');
 
 //callcards from https://www.mtgjson.com/json/AllCards.json TODO set up pipeline
 //Nice page https://mtgjson.com/downloads/compiled/
@@ -16,9 +18,10 @@ AWS.config.update(
 const S3 = new AWS.S3();
 
 const BUCKET_NAME = 'mtg-json';
+const CARD_TOKEN = "cardDocumentId";
 
 //Strings. TODO Localize
-const WELCOME_MSG = "Welcome to MTG Oracle. The unnoficial Alexa Oracle Skill. ";
+const WELCOME_MSG = "Welcome to MTG Oracle. The unofficial Alexa Oracle Skill. ";
 const CAPABILITIES_MSG = "You can ask me for the oracle text of any magic card. ";
 const PROMPT = "What can I help you with? ";
 
@@ -41,6 +44,7 @@ const GetCardIntentHandler = {
     },
     async handle(handlerInput) {
         let speakOutput = "Hmm, I didn't understand that."
+        let responseBuilder = handlerInput.responseBuilder;
 
         const slotValue = handlerInput.requestEnvelope.request.intent.slots.card.value;
 
@@ -50,7 +54,6 @@ const GetCardIntentHandler = {
             const slotId = getCardResolutionValue(handlerInput).id;
             const slotValueReal = getCardResolutionValue(handlerInput).name;
             const cardData = await getCardData(slotId);
-
             console.log(slotId);
 
             if(cardData) {
@@ -59,11 +62,42 @@ const GetCardIntentHandler = {
             } else {
                 speakOutput = `Oh no, I failed to get the card, ${slotValueReal}. with Id ${slotId}. ` + PROMPT;
             }
+
+            //Handle APL
+            if (Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.APL']){
+                // Add the RenderDocument directive to the responseBuilder
+                responseBuilder.addDirective({
+                    type: 'Alexa.Presentation.APL.RenderDocument',
+                    token: CARD_TOKEN,
+                    document: cardDocument,
+                    datasources: {
+                        "card": {
+                            "name": `${slotValueReal}`,
+                            "manaCost": `${cardData.manaCost}`,
+                            "type": `${cardData.type}`,
+                            "text": `${cardData.text}`,
+                            "url": "https://img.scryfall.com/cards/png/front/c/1/c14cdc38-dd46-495e-93bd-d2694b64d5ad.png"//TODO this needs to come from datasource
+                        }
+                    }
+                });
+            }
+            //Handle APLT
+            //Probably don't do this.
+            if (Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.APLT']){
+                responseBuilder.addDirective({
+                    type: 'Alexa.Presentation.APLT.RenderDocument',
+                    token: CARD_TOKEN,
+                    document: cardDocumentText,
+                    datasources: {
+                        "card": {
+                            "name": `${slotValueReal}`
+                        }
+                    }
+                });
+            }
         }
 
-
-
-        return handlerInput.responseBuilder
+        return responseBuilder
             .speak(speakOutput)
             .reprompt(PROMPT)
             .getResponse();
