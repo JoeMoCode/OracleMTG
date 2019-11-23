@@ -23,7 +23,7 @@
             "codeUri": "lambda/custom",
             "functionName": "ask-custom-OracleMTG-default",
             "handler": "index.handler",
-            "revisionId": "f8f48a25-9392-45c0-af08-58112d1b2cac",
+            "revisionId": "4d5e0bdf-7ec0-4156-9a15-0a065a82278f",
             "runtime": "nodejs10.x"
           }
         ]

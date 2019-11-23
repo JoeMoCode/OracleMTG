@@ -1,5 +1,5 @@
 //run with node .\data\build.js
-const ALL_CARDS = require('../data/AllCards.json');
+// const ALL_CARDS = require('../data/AllCards.json');
 const fs = require('fs');
 const AWS = require('aws-sdk');
 AWS.config.update(
@@ -56,6 +56,7 @@ function shouldSkip(str) {
 
 function setAllowed(printings) {
     //todo use legalities instead 
+    //TODO use catalog entities instead of all and upload everything https://github.com/alexa/alexa-cookbook/tree/master/feature-demos/skill-demo-catalog-entity
     return intersect(printings, ALLOWED_SETS).length > 0;
 }
 
@@ -63,6 +64,11 @@ function intersect(a, b) {
     return [...new Set(a)].filter(x => new Set(b).has(x));
 }
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+//Start executable code.
 let interactionModelType = {
     name: "Cards",
     values: [
@@ -85,9 +91,13 @@ for (const i in keyArr) {
         id: elemData.uuid
     });
 
+    
+
     //write elemData to s3 bucket.
     // putCard(elemData.uuid + ".json", elemData);
 }
+
+
 
 fs.writeFile("./data/types.json", JSON.stringify(interactionModelType), function(err) {
     if(err) {

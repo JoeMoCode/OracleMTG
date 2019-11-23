@@ -219,6 +219,7 @@ function getCardData(cardId) {
 
 const LoadUserDataInterceptor = {
     async process(handlerInput) {
+        console.log(JSON.stringify(handlerInput.requestEnvelope));
         /*const attributesManager = handlerInput.attributesManager;
         const sessionAttributes = await attributesManager.getPersistentAttributes() || {};
         
