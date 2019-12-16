@@ -6,11 +6,11 @@
       "merge": {},
       "resources": {
         "manifest": {
-          "eTag": "076e9e00aa8ac3acfcd982153e08f5db"
+          "eTag": "d267697a2eaba404ee43c5eb31420e01"
         },
         "interactionModel": {
           "en-US": {
-            "eTag": "dd056e394c3dbac1c1b728704dfcb556"
+            "eTag": "9554e7e0b7dcb3fc7340c9c9e2d50cca"
           }
         },
         "lambda": [
@@ -23,7 +23,7 @@
             "codeUri": "lambda/custom",
             "functionName": "ask-custom-OracleMTG-default",
             "handler": "index.handler",
-            "revisionId": "4d5e0bdf-7ec0-4156-9a15-0a065a82278f",
+            "revisionId": "0c9b1134-3ec8-4e44-bdd7-f09232a25ba8",
             "runtime": "nodejs10.x"
           }
         ]

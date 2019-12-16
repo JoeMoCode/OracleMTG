@@ -2,6 +2,9 @@
     "version": "1.0",
     "type": "APLT",
     "mainTemplate": {
+        "parameters": [
+            "payload"
+        ],
         "item": {
             "type": "Text",
             "id": "cardName",

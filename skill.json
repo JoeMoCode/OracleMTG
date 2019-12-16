@@ -5,8 +5,8 @@
         "en-US": {
           "summary": "Sample Short Description",
           "examplePhrases": [
-            "Alexa open hello world",
-            "hello",
+            "Alexa open oracle MTG",
+            "What does bitterblossom do?",
             "help"
           ],
           "name": "OracleMTG",
