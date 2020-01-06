@@ -1,1 +1,1 @@
-[{"name":"GetCMCIntent","samples":["converted mana cost","converted mana"]}]
+[{"name":"GetCMCIntent","samples":["converted mana cost","converted mana","CMC"]},{"name":"GetManaCostIntent","samples":["mana cost"]}]

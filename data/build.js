@@ -1,5 +1,5 @@
 //run with node .\data\build.js
-const ALL_CARDS = require('../data/AllCards.json');
+const ALL_CARDS = require('../data/scryfall-default-cards.json');
 const fs = require('fs');
 const AWS = require('aws-sdk');
 AWS.config.update(
@@ -16,18 +16,19 @@ const SAMPLES = "samples";
 const INTENT_NAME = "name";
 
 //Mapping of mtgjson attributes to synonymns and maybe more data.
+//TODO FIX THESE AND MIGRATE TO CONFIG>
 const namedAttributes = {
     colorIdentity: {[SAMPLES]:["color identity"]},
     colors: {[SAMPLES]:["colors"]},
-    convertedManaCost: {
-        [SAMPLES]:["converted mana cost", "converted mana"],
+    cmc: {
+        [SAMPLES]:["converted mana cost", "converted mana", "CMC"],
         [INTENT_NAME]: "GetCMCIntent"
     },
     edhrecRank: {[SAMPLES]:["EDH Rec Rank", "EDH recommendation ranking"]},
     // foreignData
     // layout
     legalities: {[SAMPLES]:["legal", "legal sets"]},
-    manaCost: {[SAMPLES]:["mana cost"]},
+    mana_cost: {[SAMPLES]:["mana cost"], [INTENT_NAME]: "GetManaCostIntent"},
     // mtgoFoilId
     // mtgoId
     // mtgstocksId
@@ -55,21 +56,20 @@ const namedAttributes = {
 }
 
 const BUCKET_NAME = 'mtg-json';
-const S3_KEY = 'AllCards.json';
 const ALLOWED_SETS = [
-    'MH1',
+    'MH1','THB',
     'ELD','WAR','RNA','GRN',
     'OGW','SOI','EMN','KLD','AER','AKH','HOU','XLN','RIX','DOM',
     'RTR','GTC','DGM','THS','BND','JOU','KTK','FRF','DTK','BFZ',
     'ARB','ZEN','WWK','ROE','SOM','MBS','NPH','ISD','DKA','AVR',
     'TSB','TSP','PLC','FUT','LRW','MOR','SHM','EVE','ALA','CON',
     'MRD','DST','5DN','CHK','BOK','SOK','RAV','GPT','DIS','CSP',
-    'M19','M20','ORI','M15','M14','M13','M12','M11','10E','9ED','8ED'
+    'M21','M19','M20','ORI','M15','M14','M13','M12','M11','10E','9ED','8ED'
 ];
 //Config
 const MAX_SIZE_VALUE = 140
 
-function putCard(key, bodyData) {
+function putJson(key, bodyData) {
     const params = {
         Bucket: BUCKET_NAME,
         Key: key,
@@ -97,9 +97,9 @@ function shouldSkip(str) {
 }
 
 function setAllowed(printings) {
-    //todo use legalities instead 
+    //todo use legalities instead . Hmm Maybe not. Legalities will allow even more duplicates..
     //TODO use catalog entities instead of all and upload everything https://github.com/alexa/alexa-cookbook/tree/master/feature-demos/skill-demo-catalog-entity
-    return intersect(printings, ALLOWED_SETS).length > 0;
+    return intersect([printings], ALLOWED_SETS).length > 0;
 }
 
 function intersect(a, b) {
@@ -120,34 +120,43 @@ let interactionModelCardsType = {
 
 let intentList = [];
 let attrSet = new Set();
+let setSet = new Set();
+let artistList = [];
 
-let keyArr = Object.keys(ALL_CARDS);
-for (const i in keyArr) {
-    //const element = keyArr[i];
-    const elemData = ALL_CARDS[keyArr[i]];
-    if(shouldSkip(keyArr[i]) || !setAllowed(elemData.printings)) {
-        console.log(`Skipping: ${keyArr[i]}`);
-        continue;
+let count=0;
+ALL_CARDS.forEach(function(elemData) {
+    setSet.add(elemData.set.toUpperCase());
+    if(shouldSkip(elemData.name) || !setAllowed(elemData.set.toUpperCase())) {
+        console.log(`Skipping: ${elemData.name} from ${elemData.set.toUpperCase()}`);
+        return;
     }
     interactionModelCardsType.values.push({
         name: {
-            value: sanitize(keyArr[i])
+            value: sanitize(elemData.name)
         },
-        id: elemData.uuid
-    });
-    
-    Object.keys(elemData).forEach(function(item) {
-        // console.log(item);
-        attrSet.add(item);
+        id: elemData.id
     });
 
+    if(elemData.image_uris) {
+        artistList.push({
+            bannerURL: elemData.image_uris.art_crop,
+            artist: elemData.artist
+        });
+    }
+    
+    Object.keys(elemData).forEach(function(item) {
+        attrSet.add(item);
+    });
+    count++;
+
     //write elemData to s3 bucket.
-    // putCard(elemData.uuid + ".json", elemData);
-}
+    // putJson(elemData.id + ".json", elemData);
+});
+
+putJson("bannerImages.json", artistList);
 
 //Transform the configuration format into intent list
 Object.keys(namedAttributes).forEach(function(key) {
-    console.log(JSON.stringify(key));
     nameAttrObj = namedAttributes[key];
     if(nameAttrObj[INTENT_NAME]) {
         intentList.push({
@@ -161,13 +170,21 @@ fs.writeFile("./data/build/types.json", JSON.stringify(interactionModelCardsType
     if(err) {
         return console.log(err);
     }
-    console.log("Interaction Model Types Made!");
+    console.log("Interaction Model Types File Made! Uploaded " + count) + " cards.";
 });
 
 fs.writeFile("./data/build/intents.json", JSON.stringify(intentList), function(err) {
     if(err) {
         return console.log(err);
     }
-    console.log("Intents Made!");
+    console.log("Intents File Made!");
 });
+
+fs.writeFile("./data/build/sets.json", JSON.stringify(Array.from(setSet)), function(err) {
+    if(err) {
+        return console.log(err);
+    }
+    console.log("Sets file Made!");
+});
+
 

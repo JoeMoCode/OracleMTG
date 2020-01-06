@@ -1,28 +1,10 @@
 {
   "manifest": {
-    "publishingInformation": {
-      "locales": {
-        "en-US": {
-          "summary": "Sample Short Description",
-          "examplePhrases": [
-            "Alexa open oracle MTG",
-            "What does bitterblossom do?",
-            "help"
-          ],
-          "name": "OracleMTG",
-          "description": "Sample Full Description"
-        }
-      },
-      "isAvailableWorldwide": true,
-      "testingInstructions": "Sample Testing Instructions.",
-      "category": "KNOWLEDGE_AND_TRIVIA",
-      "distributionCountries": []
-    },
     "apis": {
       "custom": {
         "endpoint": {
-          "sourceDir": "lambda/custom",
-          "uri": "ask-custom-OracleMTG-default"
+          "uri": "ask-custom-OracleMTG-default",
+          "sourceDir": "lambda/us-east-1_ask-custom-OracleMTG-default"
         },
         "interfaces": [
           {
@@ -65,6 +47,57 @@
         ]
       }
     },
-    "manifestVersion": "1.0"
+    "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "locales": {
+        "en-US": {}
+      },
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false
+    },
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "Magic Oracle",
+          "smallIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/337a/3410c29b81934ed19a72eb72de75d0af/APP_ICON",
+          "largeIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/218f/e3ead33d69df4c11b761f1654ee21414/APP_ICON_LARGE",
+          "summary": "Ask magic oracle about all of your favorite MTG Cards.",
+          "description": "This is the unofficial Alexa magic oracle skill. Find the correct text for any Magic the Gathering card from 8th edition and up. More features coming soon!",
+          "examplePhrases": [
+            "Alexa open magic oracle",
+            "What does bitterblossom do?",
+            "Tell me about lightning bolt"
+          ],
+          "keywords": [
+            "mtg",
+            "magic",
+            "the",
+            "gathering",
+            "MTG",
+            "oracle",
+            "card",
+            "cards",
+            "judge",
+            "text",
+            "edh",
+            "modern",
+            "legacy",
+            "skill",
+            "pioneer",
+            "standard",
+            "draft",
+            "limited",
+            "constructed"
+          ]
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Launch the skill. You can see the interaction model. \n\nI know cancel collides with a card in the custom Type. I added other cancel phrases. I do not expect customers ever to try to \"cancel\" the skill, but I do expect them to ask about the card Cancel.\n\nHave Fun!",
+      "category": "KNOWLEDGE_AND_TRIVIA",
+      "distributionCountries": []
+    }
   }
 }

@@ -1,13 +1,12 @@
-// This sample demonstrates handling intents from an Alexa skill using the Alexa Skills Kit SDK (v2).
-// Please visit https://alexa.design/cookbook for additional examples on implementing slots, dialog management,
-// session persistence, api calls, and more.
 const Alexa = require('ask-sdk-core');
 const persistenceAdapter = require('ask-sdk-s3-persistence-adapter');
+const metricsLogger = require('./metrics.js');
+
 const cardDocument = require('./documents/CardDocument.json');
 const cardDocumentText = require('./documents/CardDocumentText.json');
+const welcomeDocument = require('./documents/WelcomeDocument.json');
 
-//callcards from https://www.mtgjson.com/json/AllCards.json TODO set up pipeline
-//Nice page https://mtgjson.com/downloads/compiled/
+//Nice page https://scryfall.com/docs/api/bulk-data
 
 const AWS = require('aws-sdk');
 AWS.config.update(
@@ -18,35 +17,60 @@ AWS.config.update(
 const S3 = new AWS.S3();
 
 const BUCKET_NAME = 'mtg-json';
+const FILE_NAME_RANDOM_BANNERS = "bannerImages.json"; // structure: [{bannerURL:"",artist:"John Smith"}...]
 const CARD_TOKEN = "cardDocumentId";
 const CARD_CONTEXT_KEY = "currentCard";
+const USER_DATA_KEY = "userData";
+const ATTRIBUTE_ASK_KEY = "cardAttr";
+const PERSISTENCE_BUCKET = "mtg-skill-persistence";
+
+//Attr types
+const CONVERTED_MANA = "cmc";
 
 //Strings. TODO Localize
-const WELCOME_MSG = "Welcome to MTG Oracle. The unofficial Alexa Oracle Skill. ";
+const WELCOME_MSG = "Welcome to Magic Oracle. The unofficial Alexa MTG Oracle Skill. ";
+const WELCOME_BACK_MSG = "Welcome back to Magic Oracle. ";
+const CMC_ASK_CARD = "Which card do you want the converted mana cost of? ";
 const CAPABILITIES_MSG = "You can ask me for the oracle text of any magic card. ";
 const PROMPT = "What can I help you with? ";
+const DEFAULT_ERROR = "Sorry, I had trouble with that. "
 const WHAT_DO_PROMPT = "What do you want to do? ";
 const ATTRIBUTE_NO_CONTEXT_RESPONSE = "I'm sorry, you will need to ask for the card name and the attribute you want to know about. For instance, you can ask for the converted mana cost of lightning bolt. ";
+
+const LaunchRequestFirstTimeHandler = {
+    canHandle(handlerInput) {
+        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+        const isFirstTime = !sessionAttributes.hasOwnProperty(USER_DATA_KEY);
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest' && isFirstTime;
+    },
+    async handle(handlerInput) {
+        //Save the user obj so we know when they return back
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+        sessionAttributes[USER_DATA_KEY] = 1;
+        attributesManager.setPersistentAttributes(sessionAttributes);
+        attributesManager.savePersistentAttributes();
+
+        const speakOutput = WELCOME_MSG + CAPABILITIES_MSG + PROMPT;
+
+        // await handleWelcomeVisuals(handlerInput);
+
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(PROMPT)
+            .getResponse();
+    }
+}
+
 
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
-    handle(handlerInput) {
-        const speakOutput = WELCOME_MSG + CAPABILITIES_MSG + PROMPT;
+    async handle(handlerInput) {
+        const speakOutput = WELCOME_BACK_MSG + PROMPT;
 
-        if (Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.APLT']){
-            handlerInput.responseBuilder.addDirective({
-                type: 'Alexa.Presentation.APLT.RenderDocument',
-                token: CARD_TOKEN,
-                document: cardDocumentText,
-                datasources: {
-                    "card": {
-                        "name": `WELCOME`
-                    }
-                }
-            });
-        }
+        // await handleWelcomeVisuals(handlerInput);
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -55,28 +79,61 @@ const LaunchRequestHandler = {
     }
 };
 
-const GetAttributeWithSlotIntentHandler = {
+//TODO Generate these and more intent handlers and refactor to new file.
+const GetCMCIntentHandlerNoContext = {
     canHandle(handlerInput) {
-        const slotId = getAttributeResolutionValue(handlerInput).id;
-
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && 
-            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetAttributeIntent' && slotId);
+            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetCMCIntent');
     },
     handle(handlerInput) {
-        const attributeId = getAttributeResolutionValue(handlerInput).id;
-        const attribute = getAttributeResolutionValue(handlerInput).name;
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+        
+        sessionAttributes[ATTRIBUTE_ASK_KEY] = CONVERTED_MANA;
 
-        return handleGetAttribute(handlerInput, cardId, attribute, attributeId)
+        return handlerInput.responseBuilder
+            .speak(CMC_ASK_CARD)
+            .reprompt(CMC_ASK_CARD)
+            .getResponse();
     }
 }
 
-const GetAttributeWithContextIntentHandler = {
+const GetCMCIntentHandler = { // Do add visuals.
     canHandle(handlerInput) {
         const attributesManager = handlerInput.attributesManager;
         const sessionAttributes = attributesManager.getSessionAttributes() || {};
 
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && 
-            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetAttributeIntent' && CARD_CONTEXT_KEY in sessionAttributes);
+            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetCardIntent' && ATTRIBUTE_ASK_KEY in sessionAttributes
+                && sessionAttributes[ATTRIBUTE_ASK_KEY] === CONVERTED_MANA);
+    },
+    handle(handlerInput) {
+        const attributeId = "cmc";
+        const attribute = "converted mana cost";
+
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+
+        //Save this card in session memory for later queries
+        sessionAttributes[CARD_CONTEXT_KEY] = {
+            name: slotValueReal,
+            id: slotId
+        }
+        
+        const cardId = sessionAttributes[CARD_CONTEXT_KEY].id;
+        const cardName = sessionAttributes[CARD_CONTEXT_KEY].name;
+
+        return handleGetAttribute(handlerInput, cardName, cardId, attribute, attributeId);
+    }
+}
+
+const GetCMCWithContextIntentHandler = {
+    canHandle(handlerInput) {
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && 
+            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetCMCIntent' && CARD_CONTEXT_KEY in sessionAttributes);
     },
     handle(handlerInput) {
         const attributesManager = handlerInput.attributesManager;
@@ -84,33 +141,19 @@ const GetAttributeWithContextIntentHandler = {
         
         const cardId = sessionAttributes[CARD_CONTEXT_KEY].id;
         const cardName = sessionAttributes[CARD_CONTEXT_KEY].name;
-        const attributeId = getAttributeResolutionValue(handlerInput).id;
-        const attribute = getAttributeResolutionValue(handlerInput).name;
+
+        const attributeId = "cmc";
+        const attribute = "converted mana cost";
 
         return handleGetAttribute(handlerInput, cardName, cardId, attribute, attributeId);
     }
 }
 
-const GetAttributeDefaultIntentHandler = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && 
-            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetAttributeIntent');
-    },
-    handle(handlerInput) {
-        const speakOutput = ATTRIBUTE_NO_CONTEXT_RESPONSE + WHAT_DO_PROMPT;
-
-        return responseBuilder
-            .speak(speakOutput)
-            .reprompt(WHAT_DO_PROMPT)
-            .getResponse();
-    }
-}
-
 async function handleGetAttribute(handlerInput, cardName, cardId, attribute, attributeId) {
     const cardData = await getCardData(cardId);
-    let speakOutput = "Oh, I'm sorry, but I do not know about ${cardName}. "
+    let speakOutput = "Oh, I'm sorry, but I do not know anything about ${cardName}. "
     if(cardData && attributeId in cardData) {
-        speakOutput = `The card ${cardName} has ${attribute} ${cardData.attributeId}. `;
+        speakOutput = `The card ${cardName} has ${attribute} ${cardData[attributeId]}. `;
     } else if(cardData) {
         speakOutput = `Hmm, I'm sorry. I do not know the ${attribute} of ${cardName}. `;
     }
@@ -153,7 +196,7 @@ const GetCardIntentHandler = {
 
             if(cardData) {
                 console.log(JSON.stringify(cardData));
-                speakOutput = `${slotValueReal} is of type ${cardData.type}, costs ${cardData.manaCost}, and has the text, ${cardData.text}. ` + PROMPT;
+                speakOutput = `${slotValueReal} is of type ${cardData.type_line}, costs ${sanitizeMana(cardData.mana_cost)}, and has the text, ${sanitizeMana(cardData.oracle_text)} ` + PROMPT;
             } else {
                 speakOutput = `Oh no, I failed to get the card, ${slotValueReal}. with Id ${slotId}. ` + PROMPT;
             }
@@ -168,14 +211,16 @@ const GetCardIntentHandler = {
                     datasources: {
                         "card": {
                             "name": `${slotValueReal}`,
-                            "manaCost": `${cardData.manaCost}`,
-                            "type": `${cardData.type}`,
-                            "text": `${cardData.text}`,
-                            "url": "https://img.scryfall.com/cards/png/front/c/1/c14cdc38-dd46-495e-93bd-d2694b64d5ad.png"//TODO this needs to come from datasource
+                            "manaCost": `${cardData.mana_cost}`,
+                            "type": `${cardData.type_line}`,
+                            "text": `${cardData.oracle_text}`,
+                            "url": `${cardData.image_uris.large}`
                         }
                     }
                 });
             }
+        } else {
+            metricsLogger.log();
         }
 
         return responseBuilder
@@ -186,11 +231,11 @@ const GetCardIntentHandler = {
 };
 
 function getCardResolutionValue(handlerInput) {
-    return handlerInput.requestEnvelope.request.intent.slots.card.resolutions.resolutionsPerAuthority[0].values[0].value;
-}
-
-function getAttributeResolutionValue(handlerInput) {
-    return handlerInput.requestEnvelope.request.intent.slots.attribute.resolutions.resolutionsPerAuthority[0].values[0].value;
+    if(handlerInput.requestEnvelope.request.intent.slots.card.resolutions.resolutionsPerAuthority[0].status.code === "ER_SUCCESS_MATCH") {
+        return handlerInput.requestEnvelope.request.intent.slots.card.resolutions.resolutionsPerAuthority[0].values[0].value;
+    } else {
+        return null;
+    }
 }
 
 const HelpIntentHandler = {
@@ -199,19 +244,19 @@ const HelpIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'You can ask me for the data about a card. I can help you to purchase cards, too! Say the name of a card to get started.';
+        const speakOutput = CAPABILITIES_MSG + PROMPT;
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt(speakOutput)
+            .reprompt(PROMPT)
             .getResponse();
     }
 };
 const CancelAndStopIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.CancelIntent'
-                || Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent');
+            && (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent'
+                || (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.CancelIntent'));
     },
     handle(handlerInput) {
         const speakOutput = 'Goodbye!';
@@ -244,7 +289,6 @@ const IntentReflectorHandler = {
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            //.reprompt('add a reprompt if you want to keep the session open for the user to respond')
             .getResponse();
     }
 };
@@ -258,7 +302,7 @@ const ErrorHandler = {
     },
     handle(handlerInput, error) {
         console.log(`~~~~ Error handled: ${error.stack}`);
-        const speakOutput = `Sorry, I had trouble doing what you asked. Please try again.`;
+        const speakOutput = DEFAULT_ERROR + PROMPT;
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -267,9 +311,49 @@ const ErrorHandler = {
     }
 };
 
-function getCardData(cardId) {
+/**
+ * Adds welcome visuals to the response for launch request. APL and APLT
+ * @param {*} handlerInput 
+ */
+async function handleWelcomeVisuals(handlerInput) {
+    if (Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.APLT']) {
+        handlerInput.responseBuilder.addDirective({
+            type: 'Alexa.Presentation.APLT.RenderDocument',
+            token: CARD_TOKEN,
+            document: cardDocumentText,
+            datasources: {
+                "card": {
+                    "name": `HI`
+                }
+            }
+        });
+    } else if (Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.APL']) {
+        const randomImageData = await getRandomBannerPicture();
+        handlerInput.responseBuilder.addDirective({
+            type: 'Alexa.Presentation.APL.RenderDocument',
+            token: CARD_TOKEN,
+            document: welcomeDocument,
+            datasources: {
+                "imageUrl": `${randomImageData.bannerURL}`,
+                "artist": `Artist: ${randomImageData.artist}`
+            }
+        });
+    }
+}
+
+//TODO Use S3 Select instead. This call can be slow
+async function getRandomBannerPicture() {
+    const allBanners = await getObjectAtKey(FILE_NAME_RANDOM_BANNERS);
+    const selection = Math.floor(Math.random() * allBanners.length);
+    return allBanners[selection];
+}
+
+async function getCardData(cardId) {
     const key = cardId + ".json";
-    console.log("key: "+ key);
+    return getObjectAtKey(key);
+}
+
+function getObjectAtKey(key) {
     const params = {
         Bucket: BUCKET_NAME,
         Key: key
@@ -282,24 +366,37 @@ function getCardData(cardId) {
             }
 
             const objectData = data.Body.toString();
-            console.log(objectData);
             resolve(JSON.parse(objectData));
         });
     });
 }
 
+function sanitizeMana(manaCost) {
+    const SANITIZATION_MAP = {
+        "{G}": "Green",
+        "{U}": "Blue",
+        "{B}": "Black",
+        "{R}": "Red",
+        "{W}": "White",
+        "{T}": "Tap"
+    }
+
+    let sanitizedManaCost = manaCost;
+    Object.keys(SANITIZATION_MAP).forEach(element => {
+        const regex = new RegExp(element,"g");
+        sanitizedManaCost = sanitizedManaCost.replace(regex, SANITIZATION_MAP[element]);
+    });
+
+    return sanitizedManaCost;
+}
 
 const LoadUserDataInterceptor = {
     async process(handlerInput) {
-        console.log(JSON.stringify(handlerInput.requestEnvelope));
-        /*const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = await attributesManager.getPersistentAttributes() || {};
+        // console.log(JSON.stringify(handlerInput.requestEnvelope));
+        const attributesManager = handlerInput.attributesManager;
+        const persistentAttributes = await attributesManager.getPersistentAttributes() || {};
         
-        const userData = sessionAttributes.hasOwnProperty('userData') ? sessionAttributes.cards : {};
-        
-        if (userData) {
-            attributesManager.setSessionAttributes(sessionAttributes);
-        } */
+        attributesManager.setSessionAttributes(persistentAttributes);
     }
 };
 
@@ -308,21 +405,22 @@ const LoadUserDataInterceptor = {
 // defined are included below. The order matters - they're processed top to bottom.
 exports.handler = Alexa.SkillBuilders.custom()
     .withPersistenceAdapter(
-        new persistenceAdapter.S3PersistenceAdapter({bucketName:process.env.S3_PERSISTENCE_BUCKET})
+        new persistenceAdapter.S3PersistenceAdapter({bucketName:PERSISTENCE_BUCKET})
     ).addRequestInterceptors(
         LoadUserDataInterceptor
     )
     .addRequestHandlers(
+        LaunchRequestFirstTimeHandler,
         LaunchRequestHandler,
-        GetCardIntentHandler,
-        GetAttributeWithSlotIntentHandler,
-        GetAttributeWithContextIntentHandler,
-        GetAttributeDefaultIntentHandler,
+        GetCMCWithContextIntentHandler,
+        GetCMCIntentHandler,
+        GetCMCIntentHandlerNoContext,//Default handler
+        GetCardIntentHandler, // Keep this low since it is used by Attribute queries too.
         HelpIntentHandler,
         CancelAndStopIntentHandler,
         SessionEndedRequestHandler,
         IntentReflectorHandler, // make sure IntentReflectorHandler is last so it doesn't override your custom intent handlers
-        ) 
+    )
     .addErrorHandlers(
         ErrorHandler,
         )
