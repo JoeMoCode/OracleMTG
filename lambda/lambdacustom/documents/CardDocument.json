@@ -1,0 +1,148 @@
+{
+    "type": "APL",
+    "version": "1.1",
+    "settings": {},
+    "theme": "dark",
+    "import": [
+        {
+            "name": "alexa-layouts",
+            "version": "1.1.0"
+        }
+    ],
+    "resources": [],
+    "styles": {},
+    "onMount": [],
+    "graphics": {},
+    "commands": {},
+    "layouts": {
+        "KVText": {
+            "parameters": [
+                {
+                    "name": "key",
+                    "type": "string"
+                },
+                {
+                    "name": "value",
+                    "type": "string"
+                }
+            ],
+            "items": [
+                {
+                    "type": "Container",
+                    "direction": "row",
+                    "maxWidth": "55vw",
+                    "items": [
+                        {
+                            "type": "Text",
+                            "textAlign": "left",
+                            "text": "<b>${key}:</b> ${value}"
+                        }
+                    ]
+                }
+            ]
+        },
+        "KVScrollText": {
+            "parameters": [
+                {
+                    "name": "key",
+                    "type": "string"
+                },
+                {
+                    "name": "value",
+                    "type": "string"
+                }
+            ],
+            "items": [
+                {
+                    "type": "Container",
+                    "direction": "row",
+                    "maxWidth": "55vw",
+                    "items": [
+                        {
+                            "type": "ScrollView",
+                            "height": "auto",
+                            "item": {
+                                "type": "Text",
+                                "textAlign": "left",
+                                "text": "<b>${key}:</b> ${value}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "mainTemplate": {
+        "parameters": [
+            "payload"
+        ],
+        "items": [
+            {
+                "type": "Container",
+                "height": "100%",
+                "width": "100%",
+                "direction": "row",
+                "when": "${@viewportProfile != @hubRoundSmall}",
+                "items": [
+                    {
+                        "imageWidth": "40vw",
+                        "imageHeight": "80vh",
+                        "imageAspectRatio": "standard_portrait",
+                        "imageScale": "best-fit",
+                        "imageSource": "${payload.card.url}",
+                        "type": "AlexaImage",
+                        "alignSelf": "center"
+                    },
+                    {
+                        "type": "Container",
+                        "direction": "column",
+                        "paddingTop": "10vh",
+                        "paddingBottom": "10vh",
+                        "items": [
+                            {
+                                "type": "KVText",
+                                "key": "Name",
+                                "value": "${payload.card.name}"
+                            },
+                            {
+                                "type": "KVText",
+                                "key": "Cost",
+                                "value": "${payload.card.manaCost}"
+                            },
+                            {
+                                "type": "KVText",
+                                "key": "Type",
+                                "value": "${payload.card.type}"
+                            },
+                            {
+                                "type": "KVScrollText",
+                                "key": "Card Text",
+                                "value": "${payload.card.text}"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "Container",
+                "height": "100%",
+                "width": "100%",
+                "paddingTop": "10vh",
+                "alignItems": "center",
+                "direction": "column",
+                "when": "${@viewportProfile == @hubRoundSmall}",
+                "items": [
+                    {
+                        "type": "AlexaImage",
+                        "imageSource": "${payload.card.url}",
+                        "imageRoundedCorner": false,
+                        "imageScale": "best-fit",
+                        "imageHeight": "80vh",
+                        "imageAspectRatio": "standard_portrait",
+                        "imageBlurredBackground": false
+                    }
+                ]
+            }
+        ]
+    }
+}

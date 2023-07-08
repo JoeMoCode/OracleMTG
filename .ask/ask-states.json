@@ -1,0 +1,31 @@
+{
+  "askcliStatesVersion": "2020-03-31",
+  "profiles": {
+    "default": {
+      "skillId": "amzn1.ask.skill.436de085-ce18-4ee7-99f4-14c4a1efa2e0",
+      "skillMetadata": {
+        "lastDeployHash": "z2IE4Ggu7j+spc7W8ZUu+0qvKJA=",
+        "lastDeployType": "interaction-model"
+      },
+      "code": {
+        "default": {
+          "lastDeployHash": "SYh2aIArZVW0EPTa4Z53O9swva4="
+        }
+      },
+      "skillInfrastructure": {
+        "@ask-cli/lambda-deployer": {
+          "deployState": {
+            "default": {
+              "lambda": {
+                "arn": "arn:aws:lambda:us-east-1:332609039282:function:ask-custom-OracleMTG-default",
+                "lastModified": "2023-07-08T21:11:31.000+0000",
+                "revisionId": "329513a4-84fe-4821-ae19-537f84a62cfd"
+              },
+              "iamRole": "arn:aws:iam::332609039282:role/ask-lambda-OracleMTG"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 //run with node .\data\build.js
-const ALL_CARDS = require('../data/scryfall-default-cards.json');
+const ALL_CARDS = require('../data/scryfall-oracle-cards.json');
 const fs = require('fs');
 const AWS = require('aws-sdk');
 AWS.config.update(
@@ -15,47 +15,35 @@ const S3 = new AWS.S3();
 const SAMPLES = "samples";
 const INTENT_NAME = "name";
 
-//Mapping of mtgjson attributes to synonymns and maybe more data.
-//TODO FIX THESE AND MIGRATE TO CONFIG>
+//Mapping of scryfall attributes to synonymns and maybe more data.
 const namedAttributes = {
-    colorIdentity: {[SAMPLES]:["color identity"]},
-    colors: {[SAMPLES]:["colors"]},
+    color_identity: {[SAMPLES]:["color identity", "color ID"]},
+    colors: {[SAMPLES]:["colors", "color"]},
     cmc: {
-        [SAMPLES]:["converted mana cost", "converted mana", "CMC"],
+        [SAMPLES]:["converted mana cost", "converted mana", "CMC", "mana value"],
         [INTENT_NAME]: "GetCMCIntent"
     },
-    edhrecRank: {[SAMPLES]:["EDH Rec Rank", "EDH recommendation ranking"]},
-    // foreignData
-    // layout
+    edhrec_rank: {[SAMPLES]:["EDH Rec Rank", "EDH recommendation ranking"]},
     legalities: {[SAMPLES]:["legal", "legal sets"]},
-    mana_cost: {[SAMPLES]:["mana cost"], [INTENT_NAME]: "GetManaCostIntent"},
-    // mtgoFoilId
-    // mtgoId
-    // mtgstocksId
-    // name
-    printings: {[SAMPLES]:["printed sets", "printings"]},
-    // purchaseUrls
-    rulings: {[SAMPLES]:["rulings", "other rulings", "any rulings"]},
-    // scryfallOracleId
-    subtypes: {[SAMPLES]:["sub-types", "sub types"]},
-    supertypes: {[SAMPLES]:["super types", "super type"]},
-    text: {[SAMPLES]:["text", "rules text", "oracle text"]},
-    type: {[SAMPLES]:["type", "card type"]},
-    types: {[SAMPLES]:["types", "card types"]},
-    // uuid
-    // mtgArenaId
-    power: {[SAMPLES]:["power", "strength"]},
+    mana_cost: {[SAMPLES]:["mana cost", "cost"], [INTENT_NAME]: "GetManaCostIntent"},
+    //rulings_uri
+    // rulings: {[SAMPLES]:["rulings", "other rulings", "any rulings"]},
+    type_line: {[SAMPLES]:["type line", "type", "card type", "card types"]},
+    // subtypes: {[SAMPLES]:["sub-types", "sub types"]},
+    // supertypes: {[SAMPLES]:["super types", "super type"]},
+    oracle_text: {[SAMPLES]:["text", "rules text", "oracle text"]},
+    // type: {[SAMPLES]:["type", "card type"]},
+    // types: {[SAMPLES]:["types", "card types"]},
+    power: {[SAMPLES]:["power", "strength", "attack"]},
     toughness: {[SAMPLES]:["toughness", "how tough"]},
-    // faceConvertedManaCost
-    names: {[SAMPLES]:["names"]},
-    // side: 
-    leadershipSkills: {[SAMPLES]:["leadership skills"]},
+    name: {[SAMPLES]:["name"]},
     loyalty: {[SAMPLES]:["loyalty"]},
-    colorIndicator: {[SAMPLES]:["color indicator"]},
-    hasNoDeckLimit: {[SAMPLES]:["deck limit", "has no deck limit"]}
 }
+// printings: {[SAMPLES]:["printed sets", "printings"]},
+//
 
 const BUCKET_NAME = 'mtg-json';
+//TODO Remove this.
 const ALLOWED_SETS = [
     'MH1','THB',
     'ELD','WAR','RNA','GRN',
@@ -66,6 +54,8 @@ const ALLOWED_SETS = [
     'MRD','DST','5DN','CHK','BOK','SOK','RAV','GPT','DIS','CSP',
     'M21','M19','M20','ORI','M15','M14','M13','M12','M11','10E','9ED','8ED'
 ];
+//TODO update icons and svgs and expose through CDN and use in svg icon. 
+
 //Config
 const MAX_SIZE_VALUE = 140
 
@@ -90,6 +80,10 @@ function sanitize(str) {
 }
 
 function shouldSkip(str) {
+    if(nameSet.has(str)) {
+        console.log(`skipping ${str}`);
+        return true;
+    }
     if(MAX_SIZE_VALUE <= str.length) {
         return true;
     }
@@ -111,6 +105,8 @@ function sleep(ms) {
 }
 
 //Start executable code.
+let nameSet = new Set();
+
 let interactionModelCardsType = {
     name: "Cards",
     values: [
@@ -130,6 +126,7 @@ ALL_CARDS.forEach(function(elemData) {
         console.log(`Skipping: ${elemData.name} from ${elemData.set.toUpperCase()}`);
         return;
     }
+    nameSet.add(elemData.name);
     interactionModelCardsType.values.push({
         name: {
             value: sanitize(elemData.name)
@@ -154,6 +151,7 @@ ALL_CARDS.forEach(function(elemData) {
 });
 
 putJson("bannerImages.json", artistList);
+
 
 //Transform the configuration format into intent list
 Object.keys(namedAttributes).forEach(function(key) {
