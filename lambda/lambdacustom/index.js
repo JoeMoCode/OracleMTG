@@ -5,7 +5,8 @@ const metricsLogger = require('./metrics.js');
 const cardDocument = require('./documents/CardDocument.json');
 const cardDocumentText = require('./documents/CardDocumentText.json');
 const welcomeDocument = require('./documents/WelcomeDocument.json');
-const specialSymbols = require('./symbols.json').data;
+const specialSymbols = require('./data/symbols.json');
+const scryfallIds = require("./data/ids.json");
 
 //Nice page https://scryfall.com/docs/api/bulk-data
 
@@ -155,7 +156,7 @@ async function handleGetAttribute(handlerInput, cardName, cardId, attribute, att
     const cardData = await getCardData(cardId);
     let speakOutput = "Oh, I'm sorry, but I do not know anything about ${cardName}. "
     if(cardData && attributeId in cardData) {
-        speakOutput = `The card ${cardName} has ${attribute} ${cardData[attributeId]}. `;
+        speakOutput = sanitizeText(`The card ${cardName} has ${attribute} ${cardData[attributeId]}. `);
     } else if(cardData) {
         speakOutput = `Hmm, I'm sorry. I do not know the ${attribute} of ${cardName}. `;
     }
@@ -198,7 +199,8 @@ const GetCardIntentHandler = {
 
             if(cardData) {
                 console.log(JSON.stringify(cardData));
-                speakOutput = `${slotValueReal} is of type ${cardData.type_line}, costs ${sanitizeMana(cardData.mana_cost)}, and has the text, ${sanitizeMana(cardData.oracle_text)} ` + PROMPT;
+                console.log("card text",cardData.oracle_text);
+                speakOutput = sanitizeText(`${slotValueReal} is of type ${cardData.type_line}, costs ${cardData.mana_cost}, and has the text, ${cardData.oracle_text} `) + PROMPT;
             } else {
                 speakOutput = `Oh no, I failed to get the card, ${slotValueReal}. with Id ${slotId}. ` + PROMPT;
             }
@@ -351,7 +353,9 @@ async function getRandomBannerPicture() {
 }
 
 async function getCardData(cardId) {
-    return scryfall.getCard(cardId);
+    const scryfallId = scryfallIds[cardId];
+    console.log("live from scryfall ", scryfallId);
+    return scryfall.getCard(scryfallId);
     // const key = cardId + ".json";
     // return getObjectAtKey(key);
 }
@@ -396,19 +400,17 @@ function getObjectAtKey(key) {
             ]
         }
  */
-function sanitizeMana(manaCost) {
+function sanitizeText(text) {
     //Map of symbol to english words.
-    const SANITIZATION_MAP = specialSymbols.forEach(symbolDefinition => {
-            return {[symbolDefinition[symbol]]: symbolDefinition[english]}
-        });
-
-    let sanitizedManaCost = manaCost;
-    Object.keys(SANITIZATION_MAP).forEach(element => {
-        const regex = new RegExp(element,"g");
-        sanitizedManaCost = sanitizedManaCost.replace(regex, SANITIZATION_MAP[element]);
+    let sanitizedText = text;
+    specialSymbols.data.forEach(symbolDefinition => {
+        const symbolRegex = new RegExp(symbolDefinition["symbol"].replace("{","\\{").replace("}","\\}"),"g");
+        console.log("symbolRegex",symbolRegex);
+        sanitizedText = sanitizedText.replace(symbolRegex, symbolDefinition["english"]);
     });
-
-    return sanitizedManaCost;
+    
+    console.log("sanitizedText", sanitizedText);
+    return sanitizedText;
 }
 
 const LoadUserDataInterceptor = {

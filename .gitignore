@@ -63,3 +63,4 @@ typings/
 #ask 
 .ask/lambda/
 data/scryfall-oracle-cards.json
+data/build/

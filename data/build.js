@@ -118,11 +118,12 @@ let intentList = [];
 let attrSet = new Set();
 let setSet = new Set();
 let artistList = [];
+let ids = [];
 
 let count=0;
 ALL_CARDS.forEach(function(elemData) {
     setSet.add(elemData.set.toUpperCase());
-    if(shouldSkip(elemData.name) || !setAllowed(elemData.set.toUpperCase())) {
+    if(shouldSkip(elemData.name) ) {//|| !setAllowed(elemData.set.toUpperCase())
         console.log(`Skipping: ${elemData.name} from ${elemData.set.toUpperCase()}`);
         return;
     }
@@ -131,8 +132,10 @@ ALL_CARDS.forEach(function(elemData) {
         name: {
             value: sanitize(elemData.name)
         },
-        id: elemData.id
+        id: ids.length//Set index as id to shorten interaction model length
     });
+    //Add ID to list to write out for mapping in the skill. Length pre op matches new pushed index.
+    ids.push(elemData.id);
 
     if(elemData.image_uris) {
         artistList.push({
@@ -163,22 +166,29 @@ Object.keys(namedAttributes).forEach(function(key) {
         })
     }
 });
-
-fs.writeFile("./data/build/types.json", JSON.stringify(interactionModelCardsType), function(err) {
+console.log("interactionModelCardsType values length",interactionModelCardsType.values.length);
+fs.writeFile("./build/types.json", JSON.stringify(interactionModelCardsType), function(err) {
     if(err) {
         return console.log(err);
     }
-    console.log("Interaction Model Types File Made! Uploaded " + count) + " cards.";
+    console.log("Interaction Model Types File Made! Wrote " + count) + " cards.";
 });
 
-fs.writeFile("./data/build/intents.json", JSON.stringify(intentList), function(err) {
+fs.writeFile("./build/ids.json", JSON.stringify(ids), function(err) {
+    if(err) {
+        return console.log(err);
+    }
+    console.log("Scryfall Ids list File Made! Wrote " + ids.length) + " cards.";
+});
+
+fs.writeFile("./build/intents.json", JSON.stringify(intentList), function(err) {
     if(err) {
         return console.log(err);
     }
     console.log("Intents File Made!");
 });
 
-fs.writeFile("./data/build/sets.json", JSON.stringify(Array.from(setSet)), function(err) {
+fs.writeFile("./build/sets.json", JSON.stringify(Array.from(setSet)), function(err) {
     if(err) {
         return console.log(err);
     }
