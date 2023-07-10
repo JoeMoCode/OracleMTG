@@ -1,6 +1,24 @@
 {
   "askcliResourcesVersion": "2020-03-31",
   "profiles": {
+    "prod": {
+      "skillMetadata": {
+        "src": "./skill-package-prod"
+      },
+      "code": {
+        "default": {
+          "src": "lambda/lambdacustom"
+        }
+      },
+      "skillInfrastructure": {
+        "type": "@ask-cli/lambda-deployer",
+        "userConfig": {
+          "runtime": "nodejs18.x",
+          "handler": "index.handler",
+          "awsRegion": "us-east-1"
+        }
+      }
+    },
     "default": {
       "skillMetadata": {
         "src": "./skill-package"

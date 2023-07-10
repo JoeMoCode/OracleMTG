@@ -7,6 +7,7 @@ const cardDocumentText = require('./documents/CardDocumentText.json');
 const welcomeDocument = require('./documents/WelcomeDocument.json');
 const specialSymbols = require('./data/symbols.json');
 const scryfallIds = require("./data/ids.json");
+const intentAttrData = require("./data/attributeIntentData.json");
 
 //Nice page https://scryfall.com/docs/api/bulk-data
 
@@ -33,12 +34,10 @@ const CONVERTED_MANA = "cmc";
 //Strings. TODO Localize
 const WELCOME_MSG = "Welcome to Magic Oracle. The unofficial Alexa MTG Oracle Skill. ";
 const WELCOME_BACK_MSG = "Welcome back to Magic Oracle. ";
-const CMC_ASK_CARD = "Which card do you want the converted mana cost of? ";
 const CAPABILITIES_MSG = "You can ask me for the oracle text of any magic card. ";
 const PROMPT = "What can I help you with? ";
 const DEFAULT_ERROR = "Sorry, I had trouble with that. "
-const WHAT_DO_PROMPT = "What do you want to do? ";
-const ATTRIBUTE_NO_CONTEXT_RESPONSE = "I'm sorry, you will need to ask for the card name and the attribute you want to know about. For instance, you can ask for the converted mana cost of lightning bolt. ";
+const FALLBACK_MESSAGE = "Hmm sorry I did not understand that. You can ask me for any magic the gathering card or about attributes for a card, such as mana value. What would you like to know about? "
 
 const LaunchRequestFirstTimeHandler = {
     canHandle(handlerInput) {
@@ -82,97 +81,12 @@ const LaunchRequestHandler = {
     }
 };
 
-//TODO Generate these and more intent handlers and refactor to new file.
-const GetCMCIntentHandlerNoContext = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && 
-            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetCMCIntent');
-    },
-    handle(handlerInput) {
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-        
-        sessionAttributes[ATTRIBUTE_ASK_KEY] = CONVERTED_MANA;
-
-        return handlerInput.responseBuilder
-            .speak(CMC_ASK_CARD)
-            .reprompt(CMC_ASK_CARD)
-            .getResponse();
-    }
-}
-
-const GetCMCIntentHandler = { // Do add visuals.
-    canHandle(handlerInput) {
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && 
-            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetCardIntent' && ATTRIBUTE_ASK_KEY in sessionAttributes
-                && sessionAttributes[ATTRIBUTE_ASK_KEY] === CONVERTED_MANA);
-    },
-    handle(handlerInput) {
-        const attributeId = "cmc";
-        const attribute = "converted mana cost";
-
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-
-        //Save this card in session memory for later queries
-        sessionAttributes[CARD_CONTEXT_KEY] = {
-            name: slotValueReal,
-            id: slotId
-        }
-        
-        const cardId = sessionAttributes[CARD_CONTEXT_KEY].id;
-        const cardName = sessionAttributes[CARD_CONTEXT_KEY].name;
-
-        return handleGetAttribute(handlerInput, cardName, cardId, attribute, attributeId);
-    }
-}
-
-const GetCMCWithContextIntentHandler = {
-    canHandle(handlerInput) {
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && 
-            (Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetCMCIntent' && CARD_CONTEXT_KEY in sessionAttributes);
-    },
-    handle(handlerInput) {
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-        
-        const cardId = sessionAttributes[CARD_CONTEXT_KEY].id;
-        const cardName = sessionAttributes[CARD_CONTEXT_KEY].name;
-
-        const attributeId = "cmc";
-        const attribute = "converted mana cost";
-
-        return handleGetAttribute(handlerInput, cardName, cardId, attribute, attributeId);
-    }
-}
-
-async function handleGetAttribute(handlerInput, cardName, cardId, attribute, attributeId) {
-    const cardData = await getCardData(cardId);
-    let speakOutput = "Oh, I'm sorry, but I do not know anything about ${cardName}. "
-    if(cardData && attributeId in cardData) {
-        speakOutput = sanitizeText(`The card ${cardName} has ${attribute} ${cardData[attributeId]}. `);
-    } else if(cardData) {
-        speakOutput = `Hmm, I'm sorry. I do not know the ${attribute} of ${cardName}. `;
-    }
-
-    speakOutput += PROMPT;
-
-    return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt(PROMPT)
-            .getResponse(); 
-}
-
+const GET_CARD_INTENT = 'GetCardIntent';
 const GetCardIntentHandler = {
     canHandle(handlerInput) {
+        console.log("In cardIntent canHandle sessions: ", handlerInput.attributesManager.getSessionAttributes());
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetCardIntent';
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === GET_CARD_INTENT;
     },
     async handle(handlerInput) {
         const attributesManager = handlerInput.attributesManager;
@@ -182,15 +96,19 @@ const GetCardIntentHandler = {
         let responseBuilder = handlerInput.responseBuilder;
 
         const slotValue = handlerInput.requestEnvelope.request.intent.slots.card.value;
-
         console.log(slotValue);
 
         if(slotValue) {
-            const slotId = getCardResolutionValue(handlerInput).id;
-            const slotValueReal = getCardResolutionValue(handlerInput).name;
+            const slotId = getCardResolutionValue(handlerInput)?.id;
+            if(!slotId) {
+                return handlerInput.responseBuilder
+                    .speak(`Sorry, I failed to find the card, ${slotValue}. ` + PROMPT)
+                    .reprompt(PROMPT)
+                    .getResponse();
+            }
+            const slotValueReal = getCardResolutionValue(handlerInput)?.name;
             const cardData = await getCardData(slotId);
-            console.log(slotId);
-
+            console.log("CardData: ", cardData);
             //Save this card in session memory for later queries
             sessionAttributes[CARD_CONTEXT_KEY] = {
                 name: slotValueReal,
@@ -198,8 +116,6 @@ const GetCardIntentHandler = {
             }
 
             if(cardData) {
-                console.log(JSON.stringify(cardData));
-                console.log("card text",cardData.oracle_text);
                 speakOutput = sanitizeText(`${slotValueReal} is of type ${cardData.type_line}, costs ${cardData.mana_cost}, and has the text, ${cardData.oracle_text} `) + PROMPT;
             } else {
                 speakOutput = `Oh no, I failed to get the card, ${slotValueReal}. with Id ${slotId}. ` + PROMPT;
@@ -279,6 +195,93 @@ const SessionEndedRequestHandler = {
     }
 };
 
+function createGetAttrObj(props) {
+    return {
+        noContextHandler: {
+            canHandle: (handlerInput)=> {
+                return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' 
+                    && (Alexa.getIntentName(handlerInput.requestEnvelope) === props.intentName)
+            },
+            handle: (handlerInput) => {
+                const attributesManager = handlerInput.attributesManager;
+                const sessionAttributes = attributesManager.getSessionAttributes() || {};
+                
+                sessionAttributes[ATTRIBUTE_ASK_KEY] = props.attrKey;
+        
+                return handlerInput.responseBuilder
+                    .speak(props.askForInfo)
+                    .reprompt(props.askForInfo)
+                    .getResponse();
+            }
+        },
+        withContextHandler: {
+            canHandle: (handlerInput) => {
+                const attributesManager = handlerInput.attributesManager;
+                const sessionAttributes = attributesManager.getSessionAttributes() || {};
+                console.log("canHandle with context: ", sessionAttributes);
+                return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' && 
+                    (Alexa.getIntentName(handlerInput.requestEnvelope) === GET_CARD_INTENT 
+                        && sessionAttributes.hasOwnProperty(ATTRIBUTE_ASK_KEY)
+                        && sessionAttributes[ATTRIBUTE_ASK_KEY] == props.attrKey);
+            },
+            handle: async (handlerInput) => {
+                const attributesManager = handlerInput.attributesManager;
+                const sessionAttributes = attributesManager.getSessionAttributes() || {};
+
+                if(handlerInput?.requestEnvelope?.request?.intent?.slots?.card?.value) {
+                    console.log("writing card to sessionAttrs");
+                    const slotId = getCardResolutionValue(handlerInput).id;
+                    const slotValueReal = getCardResolutionValue(handlerInput).name;
+                    //Save this card in session memory for later queries
+                    sessionAttributes[CARD_CONTEXT_KEY] = {
+                        name: slotValueReal,
+                        id: slotId
+                    }
+                }
+                
+                const cardId = sessionAttributes[CARD_CONTEXT_KEY].id;
+                const cardName = sessionAttributes[CARD_CONTEXT_KEY].name;
+                
+                sessionAttributes[ATTRIBUTE_ASK_KEY] = "";
+
+                const cardData = await getCardData(cardId);
+                let speakOutput = "Oh, I'm sorry, but I do not know anything about ${cardName}. "
+                if(cardData && props.attributeId in cardData) {
+                    speakOutput = sanitizeText(`The card ${cardName} has ${props.attributeName} ${cardData[props.attributeId]}. `);
+                } else if(cardData) {
+                    speakOutput = `Hmm, I'm sorry. I do not know the ${props.attributeName} of ${cardName}. `;
+                }
+
+                //Handle APL
+                if (cardData && Alexa.getSupportedInterfaces(handlerInput.requestEnvelope)['Alexa.Presentation.APL']) {
+                    // Add the RenderDocument directive to the responseBuilder
+                    handlerInput.responseBuilder.addDirective({
+                        type: 'Alexa.Presentation.APL.RenderDocument',
+                        token: CARD_TOKEN,
+                        document: cardDocument,
+                        datasources: {
+                            "card": {
+                                "name": `${cardName}`,
+                                "manaCost": `${cardData.mana_cost}`,
+                                "type": `${cardData.type_line}`,
+                                "text": `${cardData.oracle_text}`,
+                                "url": `${cardData.image_uris.large}`
+                            }
+                        }
+                    });
+                }
+
+                speakOutput += PROMPT;
+
+                return handlerInput.responseBuilder
+                        .speak(speakOutput)
+                        .reprompt(PROMPT)
+                        .getResponse();
+            }
+        }
+    }
+}
+
 // The intent reflector is used for interaction model testing and debugging.
 // It will simply repeat the intent the user said. You can create custom handlers
 // for your intents by defining them above, then also adding them to the request
@@ -296,6 +299,19 @@ const IntentReflectorHandler = {
             .getResponse();
     }
 };
+
+const FallbackHandler = {
+    canHandle(handlerInput) {
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
+    },
+    handle(handlerInput) {
+      return handlerInput.responseBuilder
+        .speak(FALLBACK_MESSAGE)
+        .reprompt(PROMPT)
+        .getResponse();
+    },
+  };
 
 // Generic error handling to capture any syntax or routing errors. If you receive an error
 // stating the request handler chain is not found, you have not implemented a handler for
@@ -405,23 +421,30 @@ function sanitizeText(text) {
     let sanitizedText = text;
     specialSymbols.data.forEach(symbolDefinition => {
         const symbolRegex = new RegExp(symbolDefinition["symbol"].replace("{","\\{").replace("}","\\}"),"g");
-        console.log("symbolRegex",symbolRegex);
-        sanitizedText = sanitizedText.replace(symbolRegex, symbolDefinition["english"]);
+        sanitizedText = sanitizedText.replace(symbolRegex, symbolDefinition["english"] +  " ");
     });
     
-    console.log("sanitizedText", sanitizedText);
     return sanitizedText;
 }
 
 const LoadUserDataInterceptor = {
     async process(handlerInput) {
-        // console.log(JSON.stringify(handlerInput.requestEnvelope));
-        const attributesManager = handlerInput.attributesManager;
-        const persistentAttributes = await attributesManager.getPersistentAttributes() || {};
-        
-        attributesManager.setSessionAttributes(persistentAttributes);
+        if(Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest') {
+            const attributesManager = handlerInput.attributesManager;
+            const persistentAttributes = await attributesManager.getPersistentAttributes() || {};
+    
+            attributesManager.setSessionAttributes(persistentAttributes);
+        }
     }
 };
+
+const attributeHandlers = intentAttrData.flatMap((props) => {
+    const resultHandlers = createGetAttrObj(props);
+    return [//Order matters here.
+        resultHandlers.noContextHandler,
+        resultHandlers.withContextHandler
+    ]
+});
 
 // The SkillBuilder acts as the entry point for your skill, routing all request and response
 // payloads to the handlers above. Make sure any new handlers or interceptors you've
@@ -435,16 +458,15 @@ exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         LaunchRequestFirstTimeHandler,
         LaunchRequestHandler,
-        GetCMCWithContextIntentHandler,
-        GetCMCIntentHandler,
-        GetCMCIntentHandlerNoContext,//Default handler
+        ...attributeHandlers,
         GetCardIntentHandler, // Keep this low since it is used by Attribute queries too.
         HelpIntentHandler,
         CancelAndStopIntentHandler,
         SessionEndedRequestHandler,
+        FallbackHandler,
         IntentReflectorHandler, // make sure IntentReflectorHandler is last so it doesn't override your custom intent handlers
     )
     .addErrorHandlers(
         ErrorHandler,
-        )
+    )
     .lambda();

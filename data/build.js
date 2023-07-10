@@ -14,6 +14,8 @@ const S3 = new AWS.S3();
 
 const SAMPLES = "samples";
 const INTENT_NAME = "name";
+const ASK_TEXT = "ask";
+const ATTR_NAME = "attrName"
 
 //Mapping of scryfall attributes to synonymns and maybe more data.
 const namedAttributes = {
@@ -21,14 +23,15 @@ const namedAttributes = {
     colors: {[SAMPLES]:["colors", "color"]},
     cmc: {
         [SAMPLES]:["converted mana cost", "converted mana", "CMC", "mana value"],
-        [INTENT_NAME]: "GetCMCIntent"
+        [INTENT_NAME]: "GetCMCIntent",
+        [ASK_TEXT]: "Which card do you want the mana value of? "
     },
     edhrec_rank: {[SAMPLES]:["EDH Rec Rank", "EDH recommendation ranking"]},
     legalities: {[SAMPLES]:["legal", "legal sets"]},
-    mana_cost: {[SAMPLES]:["mana cost", "cost"], [INTENT_NAME]: "GetManaCostIntent"},
+    mana_cost: {[SAMPLES]:["mana cost", "cost"], [INTENT_NAME]: "GetManaCostIntent", [ASK_TEXT]: "Which card do you want the mana cost of? "},
     //rulings_uri
     // rulings: {[SAMPLES]:["rulings", "other rulings", "any rulings"]},
-    type_line: {[SAMPLES]:["type line", "type", "card type", "card types"]},
+    type_line: {[SAMPLES]:["type line", "type", "card type", "card types"], [INTENT_NAME]: "GetTypeIntent", [ASK_TEXT]: "You want the types of which card? "},
     // subtypes: {[SAMPLES]:["sub-types", "sub types"]},
     // supertypes: {[SAMPLES]:["super types", "super type"]},
     oracle_text: {[SAMPLES]:["text", "rules text", "oracle text"]},
@@ -155,7 +158,7 @@ ALL_CARDS.forEach(function(elemData) {
 
 putJson("bannerImages.json", artistList);
 
-
+const intentData = [];
 //Transform the configuration format into intent list
 Object.keys(namedAttributes).forEach(function(key) {
     nameAttrObj = namedAttributes[key];
@@ -163,8 +166,15 @@ Object.keys(namedAttributes).forEach(function(key) {
         intentList.push({
             [INTENT_NAME]: nameAttrObj[INTENT_NAME],
             [SAMPLES]: nameAttrObj[SAMPLES]
-        })
+        });
+        intentData.push({
+            intentName: nameAttrObj[INTENT_NAME],
+            askForInfo: nameAttrObj[ASK_TEXT],
+            attrKey: key,
+            attributeName: nameAttrObj[SAMPLES][0]//Just use first sample
+        });
     }
+    
 });
 console.log("interactionModelCardsType values length",interactionModelCardsType.values.length);
 fs.writeFile("./build/types.json", JSON.stringify(interactionModelCardsType), function(err) {
@@ -172,6 +182,13 @@ fs.writeFile("./build/types.json", JSON.stringify(interactionModelCardsType), fu
         return console.log(err);
     }
     console.log("Interaction Model Types File Made! Wrote " + count) + " cards.";
+});
+
+fs.writeFile("./build/attributeIntentData.json", JSON.stringify(intentData), function(err) {
+    if(err) {
+        return console.log(err);
+    }
+    console.log("attribute intent data File Made! Wrote " + intentData.length) + " cards.";
 });
 
 fs.writeFile("./build/ids.json", JSON.stringify(ids), function(err) {

@@ -4,12 +4,12 @@
     "default": {
       "skillId": "amzn1.ask.skill.436de085-ce18-4ee7-99f4-14c4a1efa2e0",
       "skillMetadata": {
-        "lastDeployHash": "GpjQKgzEHGGpvPehb9Jes7lUqK0=",
+        "lastDeployHash": "6MjUytPo9Gs+Mkw519pNf/oyFxo=",
         "lastDeployType": "interaction-model"
       },
       "code": {
         "default": {
-          "lastDeployHash": "tKxorzDZ/muv9RYf/ASxp3oABbc="
+          "lastDeployHash": "fy1+Sun+Mx+WfJTel9RVHtPs8U0="
         }
       },
       "skillInfrastructure": {
@@ -18,10 +18,36 @@
             "default": {
               "lambda": {
                 "arn": "arn:aws:lambda:us-east-1:332609039282:function:ask-custom-OracleMTG-default",
-                "lastModified": "2023-07-08T23:07:07.000+0000",
-                "revisionId": "247c4e50-c3be-4c52-a044-9073dd5e229f"
+                "lastModified": "2023-07-09T23:12:37.000+0000",
+                "revisionId": "a4acd157-ab24-44f2-a8b6-c242d67f77f3"
               },
               "iamRole": "arn:aws:iam::332609039282:role/ask-lambda-OracleMTG"
+            }
+          }
+        }
+      }
+    },
+    "prod": {
+      "skillId": "amzn1.ask.skill.436de085-ce18-4ee7-99f4-14c4a1efa2e0",
+      "skillMetadata": {
+        "lastDeployHash": "1K177xksgQc9QVPdNLPuQqPNC7w=",
+        "lastDeployType": "interaction-model"
+      },
+      "code": {
+        "default": {
+          "lastDeployHash": "TAU4tbdZSkuOMHy8uzq6J88UqB8="
+        }
+      },
+      "skillInfrastructure": {
+        "@ask-cli/lambda-deployer": {
+          "deployState": {
+            "default": {
+              "lambda": {
+                "arn": "arn:aws:lambda:us-east-1:332609039282:function:ask-magicoracle-prod-default-1688940067973",
+                "lastModified": "2023-07-10T16:47:17.000+0000",
+                "revisionId": "1bff4db8-63b7-4c62-a787-d2363a057751"
+              },
+              "iamRole": "arn:aws:iam::332609039282:role/ask-lambda-MagicOracle-1688940067354"
             }
           }
         }

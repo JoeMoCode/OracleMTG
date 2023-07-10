@@ -1,1 +1,1 @@
-[{"name":"GetCMCIntent","samples":["converted mana cost","converted mana","CMC","mana value"]},{"name":"GetManaCostIntent","samples":["mana cost","cost"]}]
+[{"name":"GetCMCIntent","samples":["converted mana cost","converted mana","CMC","mana value"]},{"name":"GetManaCostIntent","samples":["mana cost","cost"]},{"name":"GetTypeIntent","samples":["type line","type","card type","card types"]}]

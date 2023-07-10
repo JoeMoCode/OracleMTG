@@ -1,0 +1,105 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "summary": "Ask magic oracle about all of your favorite MTG Cards.",
+          "examplePhrases": [
+            "Alexa open magic oracle",
+            "What does bitterblossom do?",
+            "Tell me about lightning bolt"
+          ],
+          "keywords": [
+            "mtg",
+            "magic",
+            "the",
+            "gathering",
+            "MTG",
+            "oracle",
+            "card",
+            "cards",
+            "judge",
+            "text",
+            "edh",
+            "modern",
+            "legacy",
+            "skill",
+            "pioneer",
+            "standard",
+            "explorer",
+            "arena",
+            "MTGarena",
+            "draft",
+            "limited",
+            "constructed",
+            "tcg",
+            "trading card game",
+            "collectable"
+          ],
+          "name": "Magic Oracle",
+          "description": "This is an unofficial Alexa magic oracle skill. Find the correct text for any Magic the Gathering card.\n\n\nData comes from scryfall.\n\nFan Content permitted under the Wizards of the Coast Fan Content Policy. The literal and graphical information presented here about Magic: The Gathering, including card images, the mana symbols, and Oracle text, is copyright Wizards of the Coast, LLC, a subsidiary of Hasbro, Inc. This product is not produced by, endorsed by, supported by, or affiliated with Wizards of the Coast.\n\nTo exit the skill, say \"exit\", \"stop\", or \"go home\". \"Cancel\" will pull up information about the card.",
+          "smallIconUri": "file://assets/images/en-US_smallIconUri.png",
+          "largeIconUri": "file://assets/images/en-US_largeIconUri.png"
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Launch the skill. You can see the interaction model. \n\nI know cancel collides with a card in the custom Type. I added other cancel phrases. I do not expect customers ever to try to \"cancel\" the skill, but I do expect them to ask about the card Cancel.\n\nHave Fun!",
+      "category": "KNOWLEDGE_AND_TRIVIA",
+      "distributionCountries": []
+    },
+    "apis": {
+      "custom": {
+        "interfaces": [
+          {
+            "supportedViewports": [
+              {
+                "minHeight": 480,
+                "mode": "HUB",
+                "shape": "ROUND",
+                "maxHeight": 480,
+                "minWidth": 480,
+                "maxWidth": 480
+              },
+              {
+                "minHeight": 600,
+                "mode": "HUB",
+                "shape": "RECTANGLE",
+                "maxHeight": 600,
+                "minWidth": 1024,
+                "maxWidth": 1024
+              },
+              {
+                "minHeight": 800,
+                "mode": "HUB",
+                "shape": "RECTANGLE",
+                "maxHeight": 800,
+                "minWidth": 1280,
+                "maxWidth": 1280
+              },
+              {
+                "minHeight": 540,
+                "mode": "TV",
+                "shape": "RECTANGLE",
+                "maxHeight": 540,
+                "minWidth": 960,
+                "maxWidth": 960
+              }
+            ],
+            "type": "ALEXA_PRESENTATION_APL"
+          }
+        ],
+        "endpoint": {
+          "uri": "arn:aws:lambda:us-east-1:332609039282:function:ask-magicoracle-prod-default-1688940067973"
+        }
+      }
+    },
+    "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "containsAds": false,
+      "isExportCompliant": true,
+      "isChildDirected": false,
+      "usesPersonalInfo": false
+    }
+  }
+}
